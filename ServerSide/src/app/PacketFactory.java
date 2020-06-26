@@ -3,7 +3,6 @@ package app;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -37,6 +36,9 @@ public class PacketFactory {
         int endIndex = startIndex + bufferSize;
         byte[] buf = Arrays.copyOfRange(array, startIndex, endIndex);
 
+        // convert bytes[] to string
+        System.out.println("Sending : " + new String(buf) + " of length : " + buf.length);
+
         //concatoner header et buffer
         byte[] h = header.getBytes();
         byte[] combined = new byte[h.length + buf.length];
@@ -49,14 +51,60 @@ public class PacketFactory {
         return new DatagramPacket(combined, combined.length, ip, receiverPort);
     }
 
-    public static ArrayList<DatagramPacket> makeDatagramPackets(InetAddress address, int port, int lastReceived, int lastSent, int windowSize, String fileName) throws IOException {
+    public static ArrayList<DatagramPacket> makeDatagramPackets(InetAddress address, int port, int lastReceived, int windowSize, String fileName) throws IOException {
         ArrayList<DatagramPacket> dataList = new ArrayList<DatagramPacket>();
 
-        for(int e = 0; e < (lastSent - lastReceived); e++){
+        for(int e = 0; e < windowSize; e++){
             int packetNo = e + lastReceived;
-            DatagramPacket packet = createTransferPacket(address, port, packetNo, fileName, Server.BUFFER_SIZE);
-            dataList.add(packet);
+            if(packetNo > Server.lastPacket(fileName)){
+                return dataList;
+            }
+
+            if(packetNo == Server.lastPacket(fileName)){
+                DatagramPacket packet = makeLastPacket(address, port, packetNo, Server.BUFFER_SIZE, fileName);
+                dataList.add(packet);
+            } else {
+                DatagramPacket packet = createTransferPacket(address, port, packetNo, fileName, Server.BUFFER_SIZE);
+                dataList.add(packet);
+            }
         }
         return dataList;
+    }
+
+    public static DatagramPacket makeLastPacket(InetAddress inet, int outputPort, int paquetNo, int maxWindows, String fileName) throws IOException {
+        //Header
+        String header = "LAST";
+        header += " ";
+        header += paquetNo;
+        header += " ";
+        header += fileName;
+        header += "&";
+
+        //Separator for PacketReader
+        header += ";;;";
+
+        //Content
+        String path = System.getProperty("user.dir");
+        path += "/fileToSend/";
+        path += fileName;
+        byte[] array = Files.readAllBytes(Paths.get(path));
+
+        //faire un paquet pour packetNo de longueur BufferSize
+        int startIndex = Server.BUFFER_SIZE * (paquetNo);
+        int endIndex = array.length;
+        byte[] buf = Arrays.copyOfRange(array, startIndex, endIndex);
+
+        // convert bytes[] to string
+        System.out.println("Sending : " + new String(buf) + " of length : " + buf.length);
+
+        //concatoner header et buffer
+        byte[] h = header.getBytes();
+        byte[] combined = new byte[h.length + buf.length];
+
+        for (int i = 0; i < combined.length; ++i) {
+            combined[i] = i < h.length ? h[i] : buf[i - h.length];
+        }
+
+        return new DatagramPacket(combined, combined.length, inet, outputPort);
     }
 }

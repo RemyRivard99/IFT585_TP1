@@ -1,5 +1,6 @@
 package app;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
@@ -13,13 +14,22 @@ public class Server implements Runnable {
 
     public final static int TIMEOUT = 0;  //doit etre 5000
     public final static int MAX_WINDOWS = 5;
-    public final static int BUFFER_SIZE = 256;
+    public final static int BUFFER_SIZE = 236;
 
     public static ArrayList<ClientInfo> clients;
 
     public Server(int port) {
         this.port = port;
         clients = new ArrayList<ClientInfo>();
+    }
+
+    public static int lastPacket(String fileName) {
+        String path = System.getProperty("user.dir");
+        path += "/fileToSend/";
+        path += fileName;
+        File file = new File(path);
+
+        return (int) (file.length()/BUFFER_SIZE);
     }
 
     @Override

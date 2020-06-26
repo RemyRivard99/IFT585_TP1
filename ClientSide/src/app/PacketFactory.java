@@ -3,7 +3,6 @@ package app;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -46,10 +45,12 @@ public class PacketFactory {
         return new DatagramPacket(combined, combined.length, ip, receiverPort);
     }
 
-    public static synchronized DatagramPacket createAckPacket(InetAddress ip, int port, int packetNo) {
+    public static synchronized DatagramPacket createAckPacket(InetAddress ip, int port, int packetNo, String fileName) {
         String ACKstring = "ACK";
         ACKstring += " ";
         ACKstring += packetNo;
+        ACKstring += " ";
+        ACKstring += fileName;
 
         byte buf[] = ACKstring.getBytes();
 

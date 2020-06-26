@@ -2,6 +2,7 @@ package tests;
 
 import app.PacketFactory;
 import app.PacketReader;
+import app.Server;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ public class packetTests {
         int windowSize = 2;
         String fileName = "testFile.txt";
 
-        ArrayList<DatagramPacket> packetList = PacketFactory.makeDatagramPackets(address, port, lastReceived, lastSent, windowSize, fileName);
+        ArrayList<DatagramPacket> packetList = PacketFactory.makeDatagramPackets(address, port, lastReceived, windowSize, fileName);
 
         for(int i = 0; i < packetList.size(); i++){
             PacketReader pr = new PacketReader(packetList.get(i));
@@ -35,6 +36,12 @@ public class packetTests {
         }
 
         //Pas d'assertions mais les donnees du paquet a verifier apparaissent dans la console.
+    }
+
+    @Test
+    public void lastPacket(){
+        int i = Server.lastPacket("testFile.txt");
+        System.out.println("lastPaquet : " + i + " should be : " + 21);
     }
 
 }

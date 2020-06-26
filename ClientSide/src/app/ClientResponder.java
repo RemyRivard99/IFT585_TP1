@@ -10,10 +10,12 @@ public class ClientResponder extends Thread {
 
     DatagramSocket socket;
     DatagramPacket packet;
+    Client c;
 
-    public ClientResponder(DatagramPacket packet, DatagramSocket socket) {
+    public ClientResponder(DatagramPacket packet, DatagramSocket socket, Client c) {
         this.socket = socket;
         this.packet = packet;
+        this.c = c;
     }
 
     @Override
@@ -21,12 +23,16 @@ public class ClientResponder extends Thread {
         try {
             ArrayList<DatagramPacket> dataList = makeResponse(packet);
 
+            if (dataList == null){
+                System.out.println("fin du transfert");
+            }
+
             //initialise le socket
             socket = new DatagramSocket();
 
             //pour chaque paquet
             for(int i = 0; i < dataList.size() ; i++){
-                //socket.send(dataList.get(i));
+                socket.send(dataList.get(i));
                 System.out.println(new String(dataList.get(i).getData()));
             }
 
@@ -72,7 +78,7 @@ public class ClientResponder extends Thread {
                 }
 
                 PacketReader pr = new PacketReader(fileData);
-                System.out.println("---received packet no: " + packetNo + " for file: " + pr.type + " with data: " + pr.getMessage());
+                System.out.println("---received packet no: " + packetNo + " for file: " + pr.type);
 
                 String data = readPaquet(packet);
                 PacketReader pr2 = new PacketReader(data);
@@ -86,40 +92,46 @@ public class ClientResponder extends Thread {
                 File file = new File(path);
 
                 //Ecrit dans le fichier
-                FileOutputStream fos = new FileOutputStream(file.getPath());
-                fos.write(pr2.getMessage().getBytes());
+                FileOutputStream fos = new FileOutputStream(file.getPath(), true);
+                System.out.println("offset : " + packetNo * pr2.getMessage().getBytes().length + " / size : " + pr2.getMessage().getBytes().length);
+                fos.write(pr2.getMessage().getBytes()//, packetNo * pr2.getMessage().getBytes().length, pr2.getMessage().getBytes().length
+                        );
+                fos.close();
 
                 //Envoie un ACK pour confirmer le paquet
                 ArrayList<DatagramPacket> dataList = new ArrayList<>();
-                dataList.add( PacketFactory.createAckPacket(packet.getAddress(), packet.getPort(), packetNo));
+                dataList.add( PacketFactory.createAckPacket(packet.getAddress(), packet.getPort(), packetNo, pr.type));
                 return dataList;
 
                 /** recoit le dernier paquet et arrete */
             } else if (command.startsWith("LAST")){
-                /*
-                int paquetNo = (int) read(tokenizer, "int");
+                //Lis les donnees du paquet
+                int packetNo = (int) read(tokenizer, "int");
+                String fileData = (String) read(tokenizer, "string");
 
-                ClientInfo client = Server.findClient(packet.getAddress(), packet.getPort());
+                PacketReader pr = new PacketReader(fileData);
+                System.out.println("---received packet no: " + packetNo + " for file: " + pr.type);
 
-                //si c'est le dernier ACK, arrete l'algorithme
-                if(paquetNo == client.fileSize) return null;
+                String data = readPaquet(packet);
+                PacketReader pr2 = new PacketReader(data);
+                System.out.println("---with data: ");
+                System.out.println(pr2.getMessage());
 
-                //appliquer la logique pour bouger lastSent
-                if(paquetNo == client.lastReceived) client.lastReceived++;
-                if(client.lastSent - client.lastReceived < Server.MAX_WINDOWS) client.lastSent++;
+                //Ajoute les donnees au fichier
+                String path = System.getProperty("user.dir");
+                path += "/receivedFiles/";
+                path += pr.type;
+                File file = new File(path);
 
-                return PacketFactory.makeDatagramPackets(packet.getAddress(), packet.getPort(), client.lastReceived, client.lastSent, Server.MAX_WINDOWS, client.fileName);
-                 */
+                //Ecrit dans le fichier
+                FileOutputStream fos = new FileOutputStream(file.getPath(), true);
+                System.out.println("offset : " + packetNo * pr2.getMessage().getBytes().length + " / size : " + pr2.getMessage().getBytes().length);
+                fos.write(pr2.getMessage().getBytes()//, packetNo * pr2.getMessage().getBytes().length, pr2.getMessage().getBytes().length
+                );
+                fos.close();
+                c.setRunning(false);
+                return null;
             }
-            /*
-            else if (command.equals("RECEIVEFILE")) {
-                System.out.println("helloWorld!!!");
-                String fileName = (String) read(tokenizer, "string");
-                receiveFile(fileName, client.port, client.address);
-                return receivedAck();
-
-            }
-            */
             else System.out.println("  Requete invalide.  Essayer \"help\"");
         }
         catch (Exception e) {

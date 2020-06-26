@@ -38,12 +38,11 @@ public class Responder extends Thread {
 
             if(resend) {
                 ClientInfo client = Server.findClient(inet, outputPort);
-                dataList = PacketFactory.makeDatagramPackets(inet, outputPort, client.lastReceived, client.lastSent, Server.MAX_WINDOWS, client.fileName);
+                dataList = PacketFactory.makeDatagramPackets(inet, outputPort, client.lastReceived, Server.MAX_WINDOWS, client.fileName);
             } else {
                 dataList = makeResponse(packet);
             }
 
-            //pour chaque paquet produit par GoBackN
             for(int i = 0; i < dataList.size() ; i++){
                 socket.send(dataList.get(i));
             }
@@ -83,25 +82,16 @@ public class Responder extends Thread {
             /** Un client acquiese avoir recu un fichier */
             } else if (command.equals("ACK")){
                 int paquetNo = (int) read(tokenizer, "int");
+                String fileName = (String) read(tokenizer, "string");
+                fileName = fileName.trim();
 
-                ClientInfo client = Server.findClient(inet, outputPort);
-
-                //si c'est le dernier ACK, arrete l'algorithme
-                if(paquetNo == client.fileSize) return null;
-
-                //appliquer la logique pour bouger lastSent
-                if(paquetNo == client.lastReceived) client.lastReceived++;
-                if(client.lastSent - client.lastReceived < Server.MAX_WINDOWS) client.lastSent++;
-
-                return PacketFactory.makeDatagramPackets(inet, outputPort, client.lastReceived, client.lastSent, Server.MAX_WINDOWS, client.fileName);
+                return PacketFactory.makeDatagramPackets(inet, outputPort, paquetNo, Server.MAX_WINDOWS, fileName);
             }
             else System.out.println("  Requete invalide.  Essayer \"help\"");
         }
         catch (Exception e) {
             System.out.println("** " + e.toString());
         }
-
-        //TODO : faut arranger ca
         return null;
     }
 
